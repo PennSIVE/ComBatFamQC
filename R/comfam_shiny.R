@@ -29,21 +29,10 @@
 #' comfam_shiny(result = result_lm)
 #' }
 
-<<<<<<< HEAD
 # Specify the application port
 options(shiny.host = "0.0.0.0")
 options(shiny.port = 3838)
 
-comfam_shiny = function(result, after = FALSE, ...){
-  info = result$info
-  type = info$type
-  df = info$df
-  batch = info$batch
-  features = info$features
-  covariates = info$cov_shiny
-  char_var = info$char_var
-  num_var = setdiff(covariates, char_var)
-=======
 
 comfam_shiny <- function(result, after = FALSE){
   info <- result$info
@@ -54,7 +43,6 @@ comfam_shiny <- function(result, after = FALSE){
   covariates <- info$cov_shiny
   char_var <- info$char_var
   num_var <- setdiff(covariates, char_var)
->>>>>>> upstream/main
 
   ## UI Design
   ui <- function(request) {
