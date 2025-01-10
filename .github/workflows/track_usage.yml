@@ -15,12 +15,12 @@ jobs:
 
     - name: Fetch repository traffic views
       run: |
-        curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+        curl -H "Authorization: token ${{ secrets.PERSONAL_ACCESS_TOKEN }}" \
         https://api.github.com/repos/PennSIVE/ComBatFamQC/traffic/views > views.json
 
     - name: Fetch repository traffic clones
       run: |
-        curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+        curl -H "Authorization: token ${{ secrets.PERSONAL_ACCESS_TOKEN }}" \
         https://api.github.com/repos/PennSIVE/ComBatFamQC/traffic/clones > clones.json
 
     - name: Commit and push data
