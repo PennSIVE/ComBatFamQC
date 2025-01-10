@@ -20,10 +20,6 @@
 #'
 #' @export
 
-# Specify the application port
-options(shiny.host = "0.0.0.0")
-options(shiny.port = 3838)
-
 comfam_shiny = function(result, after = FALSE, ...){
   info = result$info
   type = info$type
