@@ -26,7 +26,7 @@ The ComBatFamQC visualization includes three key functions:
 -   `combat_harm`: provides default harmonization methods from the ComBatFamily package.
 -   `comfam_shiny`: generate interactive visualization through Rshiny.
 
-The ComBatFamQC includes the following harmonziation methods:
+The ComBatFamQC includes the following harmonizationmethods:
 
 -   ComBat (Johnson et al., 2007)
 -   ComBat-GAM (Pomponio et al., 2020)
@@ -37,7 +37,7 @@ The ComBatFamQC includes the following harmonziation methods:
 # Set up
 
 
-Install the ComBatFamQC package and read in the data set to be harmonized. Adni data is used in the vignette for illustration. To be noticed, the data set should include at least the following columns:
+Install the ComBatFamQC package and read in the data set to be harmonized. ADNI data is used in the vignette for illustration. To be noticed, the data set should include at least the following columns:
 
 -   **batch** column
 -   **feature** columns (make sure univariate column is excluded)
@@ -86,7 +86,22 @@ result_lmer <- visual_prep(type = "lmer", features = features, batch = batch, co
 comfam_shiny(result_lmer)
 ```
 
+# Export Batch Effect Diagnosis Result
 
+There are two export options: 1) generate a Quarto report (requires Quarto to be installed), and 2) generate a combined Excel file.
+
+-   Generate a Quarto report
+
+```{r, eval=FALSE}
+#library(quarto)
+diag_save(path = "path/to/dir", result = result_lmer, use_quarto = TRUE)
+```
+
+-   Generate a combined EXCEL file
+
+```{r, eval=FALSE}
+diag_save(path = "path/to/dir", result = result_lmer, use_quarto = FALSE)
+```
 
 # Harmonization Using default ComBatFamily Methods
 

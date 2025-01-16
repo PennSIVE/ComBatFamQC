@@ -509,7 +509,7 @@ model_gen <- function(y, type = "lm", batch = NULL, covariates = NULL, interacti
 #' @export
 #'
 #' @examples
-#' covariates = adni[, c("AGE", "SEX")]
+#' covariates <- adni[, c("AGE", "SEX")]
 #' form_gen(x = "lm", c = covariates)
 #'
 
@@ -554,19 +554,18 @@ form_gen <- function(x, c = NULL, i = NULL, random = NULL, smooth = NULL){
 #'
 #' @return `interaction_gen` returns a list containing the following components:
 #' \item{interaction}{A vector of interaction terms to be included}
-#' \item{covariates}{Modefied covariates after expressing interaction terms}
-#' \item{smooth}{Modefied smooth terms after expressing interaction terms}
+#' \item{covariates}{Modified covariates after expressing interaction terms}
+#' \item{smooth}{Modified smooth terms after expressing interaction terms}
 #'
 #' @export
 #'
 #' @examples
-#' \dontrun{
 #' interaction_gen(type = "lm", covariates = c("AGE", "SEX", "DIAGNOSIS"),
 #' interaction = "AGE,DIAGNOSIS")
 #'
 #' interaction_gen(type = "gam", covariates = c("AGE", "SEX", "DIAGNOSIS"),
 #' smooth = "AGE", smooth_int_type = "linear", interaction = "AGE,DIAGNOSIS")
-#' }
+#'
 
 
 
@@ -631,10 +630,11 @@ interaction_gen <- function(type = "lm", covariates = NULL, smooth = NULL, inter
 
 #' Export Batch Effect Diagnosis Results
 #'
-#' Save all the batch effect diagnosis result in a single excel file.
+#' Save all the batch effect diagnosis results in a single Excel file or a Quarto report.
 #'
-#' @param path The path to save the excel file.
+#' @param path The path to save the result.
 #' @param result A list derived from `visual_prep()` that contains datasets and statistical test results.
+#' @param use_quarto A boolean variable indicating whether to generate a Quarto report.
 #'
 #' @return This function does not return a value. It saves the data to the specified file.
 #'
@@ -644,44 +644,74 @@ interaction_gen <- function(type = "lm", covariates = NULL, smooth = NULL, inter
 #'
 #'
 #' @examples
-#' \dontrun{
-#' result <- readRDS("./tests/testthat/previous-results/lm_result.rds")
-#' temp_dir <- tempdir()
-#' diag_save(temp_dir, result)
+#' # Initialize result to NULL for safety
+#' result <- NULL
+#'
+#' # Check if the previous results file exists and load it, or run `visual_prep`
+#' if (file.exists("./tests/testthat/previous-results/lm_result.rds")) {
+#'   result <- readRDS("./tests/testthat/previous-results/lm_result.rds")
+#' }
+#'
+#' # Use the result if it is available
+#' if (!is.null(result)) {
+#'   temp_dir <- tempdir()
+#'   diag_save(temp_dir, result)
+#'   message("Diagnostics saved to: ", temp_dir)
+#' } else {
+#'   message("Result is NULL. Please ensure the file exists and is accessible.")
 #' }
 
+diag_save <- function(path, result, use_quarto = TRUE){
+  quarto_package <- requireNamespace("quarto", quietly = TRUE)
+  if (use_quarto && !is.null(Sys.which("quarto")[[1]]) && quarto_package) {
+    original_dir <- getwd()
+    template_path <- system.file("quarto_templates/diagnosis_report.qmd", package = "ComBatFamQC")
+    new_template_path <- file.path(path, basename(template_path))
+    if (!file.exists(new_template_path)) {
+      file.copy(template_path, new_template_path, overwrite = TRUE)
+      message("Template moved to: ", new_template_path)
+    }
+    output_file <- file.path(path, "diagnosis_report.html")
+    setwd(path)
+    on.exit(setwd(original_dir), add = TRUE)
 
-diag_save <- function(path, result){
-  wb <- createWorkbook()
-  header_style <- createStyle(textDecoration = "bold", fgFill = "#D3D3D3", halign = "center")
-  addWorksheet(wb, "Batch Summary")
-  writeData(wb, "Batch Summary", result$info$summary_df)
-  addStyle(wb, sheet = "Batch Summary", style = header_style, rows = 1, cols = seq_len(ncol(result$info$summary_df)), gridExpand = TRUE)
-  addWorksheet(wb, "PCA Summary")
-  writeData(wb, "PCA Summary", result$pca_summary)
-  addStyle(wb, sheet = "PCA Summary", style = header_style, rows = 1, cols = seq_len(ncol(result$pca_summary)), gridExpand = TRUE)
-  addWorksheet(wb, "MDMR")
-  writeData(wb, "MDMR", result$mdmr.summary)
-  addStyle(wb, sheet = "MDMR", style = header_style, rows = 1, cols = seq_len(ncol(result$mdmr.summary)), gridExpand = TRUE)
-  addWorksheet(wb, "ANOVA")
-  writeData(wb, "ANOVA", result$anova_test_df)
-  addStyle(wb, sheet = "ANOVA", style = header_style, rows = 1, cols = seq_len(ncol(result$anova_test_df)), gridExpand = TRUE)
-  addWorksheet(wb, "Kruskal-Wallis")
-  writeData(wb, "Kruskal-Wallis", result$kw_test_df)
-  addStyle(wb, sheet = "Kruskal-Wallis", style = header_style, rows = 1, cols = seq_len(ncol(result$kw_test_df)), gridExpand = TRUE)
-  addWorksheet(wb, "Kenward-Roger")
-  writeData(wb, "Kenward-Roger", result$kr_test_df)
-  addStyle(wb, sheet = "Kenward-Roger", style = header_style, rows = 1, cols = seq_len(ncol(result$kr_test_df)), gridExpand = TRUE)
-  addWorksheet(wb, "Levene's Test")
-  writeData(wb, "Levene's Test", result$lv_test_df)
-  addStyle(wb, sheet = "Levene's Test", style = header_style, rows = 1, cols = seq_len(ncol(result$lv_test_df)), gridExpand = TRUE)
-  addWorksheet(wb, "Bartlett's Test")
-  writeData(wb, "Bartlett's Test", result$bl_test_df)
-  addStyle(wb, sheet = "Bartlett's Test", style = header_style, rows = 1, cols = seq_len(ncol(result$bl_test_df)), gridExpand = TRUE)
-  addWorksheet(wb, "Fligner-Killeen")
-  writeData(wb, "Fligner-Killeen", result$fk_test_df)
-  addStyle(wb, sheet = "Fligner-Killeen", style = header_style, rows = 1, cols = seq_len(ncol(result$fk_test_df)), gridExpand = TRUE)
-  saveWorkbook(wb, file = paste0(path, "/diagnosis.xlsx"), overwrite = TRUE)
+    quarto::quarto_render(
+      input = "diagnosis_report.qmd",
+      output_file = "diagnosis_report.html",
+      execute_params = list(data = result)
+    )
+  }else{
+    wb <- createWorkbook()
+    header_style <- createStyle(textDecoration = "bold", fgFill = "#D3D3D3", halign = "center")
+    addWorksheet(wb, "Batch Summary")
+    writeData(wb, "Batch Summary", result$info$summary_df)
+    addStyle(wb, sheet = "Batch Summary", style = header_style, rows = 1, cols = seq_len(ncol(result$info$summary_df)), gridExpand = TRUE)
+    addWorksheet(wb, "PCA Summary")
+    writeData(wb, "PCA Summary", result$pca_summary)
+    addStyle(wb, sheet = "PCA Summary", style = header_style, rows = 1, cols = seq_len(ncol(result$pca_summary)), gridExpand = TRUE)
+    addWorksheet(wb, "MDMR")
+    writeData(wb, "MDMR", result$mdmr.summary)
+    addStyle(wb, sheet = "MDMR", style = header_style, rows = 1, cols = seq_len(ncol(result$mdmr.summary)), gridExpand = TRUE)
+    addWorksheet(wb, "ANOVA")
+    writeData(wb, "ANOVA", result$anova_test_df)
+    addStyle(wb, sheet = "ANOVA", style = header_style, rows = 1, cols = seq_len(ncol(result$anova_test_df)), gridExpand = TRUE)
+    addWorksheet(wb, "Kruskal-Wallis")
+    writeData(wb, "Kruskal-Wallis", result$kw_test_df)
+    addStyle(wb, sheet = "Kruskal-Wallis", style = header_style, rows = 1, cols = seq_len(ncol(result$kw_test_df)), gridExpand = TRUE)
+    addWorksheet(wb, "Kenward-Roger")
+    writeData(wb, "Kenward-Roger", result$kr_test_df)
+    addStyle(wb, sheet = "Kenward-Roger", style = header_style, rows = 1, cols = seq_len(ncol(result$kr_test_df)), gridExpand = TRUE)
+    addWorksheet(wb, "Levene's Test")
+    writeData(wb, "Levene's Test", result$lv_test_df)
+    addStyle(wb, sheet = "Levene's Test", style = header_style, rows = 1, cols = seq_len(ncol(result$lv_test_df)), gridExpand = TRUE)
+    addWorksheet(wb, "Bartlett's Test")
+    writeData(wb, "Bartlett's Test", result$bl_test_df)
+    addStyle(wb, sheet = "Bartlett's Test", style = header_style, rows = 1, cols = seq_len(ncol(result$bl_test_df)), gridExpand = TRUE)
+    addWorksheet(wb, "Fligner-Killeen")
+    writeData(wb, "Fligner-Killeen", result$fk_test_df)
+    addStyle(wb, sheet = "Fligner-Killeen", style = header_style, rows = 1, cols = seq_len(ncol(result$fk_test_df)), gridExpand = TRUE)
+    saveWorkbook(wb, file = paste0(path, "/diagnosis.xlsx"), overwrite = TRUE)
+  }
 }
 
 
@@ -699,11 +729,25 @@ diag_save <- function(path, result){
 #'
 #'
 #' @examples
-#' \dontrun{
-#' age_list <- readRDS("./tests/testthat/previous-results/age_list.rds")
-#' temp_dir <- tempdir()
-#' age_save(temp_dir, age_list )
+#' # Initialize result to NULL for safety
+#' age_list <- NULL
+#'
+#' # Check if the previous results file exists and load it
+#' if (file.exists("./tests/testthat/previous-results/age_list.rds")) {
+#'   age_list <- readRDS("./tests/testthat/previous-results/age_list.rds")
 #' }
+#'
+#' # Use the result if it is available
+#' if (!is.null(age_list)) {
+#'   temp_dir <- tempdir()
+#'   age_save(temp_dir, age_list)
+#'   message("Age trend table saved to: ", temp_dir)
+#' } else {
+#'   message("Age list is NULL. Please ensure the file exists and is accessible.")
+#' }
+#'
+
+
 
 
 age_save <- function(path, age_list){
@@ -762,22 +806,26 @@ age_save <- function(path, age_list){
 #' @export
 #'
 #' @examples
-#' \dontrun{
-#' set.seed(123)
-#' sub_df <- data.frame(
-#'   age = seq(1, 20, length.out = 100),
-#'   height = 50 + 2.5 * seq(1, 20, length.out = 100) + rnorm(100, 0, 5)
-#' )
+#' if (requireNamespace("gamlss", quietly = TRUE)) {
+#'   library(gamlss)
+#'   set.seed(123)
+#'   sub_df <- data.frame(
+#'     age = seq(1, 20, length.out = 100),
+#'     height = 50 + 2.5 * seq(1, 20, length.out = 100) + rnorm(100, 0, 5)
+#'   )
 #'
-#' mdl <- gamlss(height ~ pb(age), data = sub_df, family = NO())
+#'   mdl <- gamlss(height ~ pb(age), data = sub_df, family = NO())
 #'
-#' quantile_function <- getQuantileRefactored(
-#'   obj = mdl,
-#'   term = "age",
-#'   quantile = c(0.25, 0.5, 0.75),
-#'   data = sub_df
-#' )
-#' }
+#'   quantile_function <- getQuantileRefactored(
+#'     obj = mdl,
+#'     term = "age",
+#'     quantile = c(0.25, 0.5, 0.75),
+#'     data = sub_df
+#'   )
+#'  }else{
+#'  message("The 'gamlss' package is not installed. Please install it to run this example.")
+#'  }
+
 
 getQuantileRefactored <- function(obj, term, quantile, data, n.points = 100, fixed.at = list()) {
   if (is.null(obj) || !inherits(obj, "gamlss"))

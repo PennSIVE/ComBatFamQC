@@ -35,9 +35,9 @@ data(age_df)
 
 # Life Span Age Trend Visualization
 
-In this step, we need to generate a list of data sets for all rois. Each roi's data set contains four columns:
+In this step, we need to generate a list of data sets for all ROIs. Each ROI's data set contains four columns:
 
--   **roi.name**: roi value
+-   **roi.name**: ROI value
 -   **age**: subject's age info
 -   **sex**: subject's sex info
 -   **icv**: subject's intracranial volume
@@ -51,21 +51,22 @@ icv <- "ICV_baseline"
 age_df[[sex]] <- as.factor(age_df[[sex]])
 ```
 
-## Create a list of data sets for all rois
+## Create a list of data sets for all ROIs
 
 ```{r, eval = FALSE}
 # Create sub_df for different features
 sub_df_list <- lapply(seq_len(length(features)), function(i){
-    sub_df <- df[,c(features[i], age, sex, icv)] %>% na.omit()
+    sub_df <- age_df[,c(features[i], age, sex, icv)] %>% na.omit()
     colnames(sub_df) <- c(features[i], "age", "sex", "icv")
     return(sub_df)
   })
 ```
 
-## Create age trend estimation for all rois
+## Create age trend estimation for all ROIs
 
 ```{r, eval = FALSE}
 # For MAC users
+library(parallel)
 age_list <- mclapply(seq_len(length(features)), function(w){
   age_sub <- age_list_gen (sub_df = sub_df_list[[w]],  lq = 0.25, hq = 0.75)
   return(age_sub)
@@ -84,8 +85,13 @@ quantile_type <- c(paste0("quantile_", 100*0.25), "median", paste0("quantile_", 
 
 ## Launch Shiny App for Visualization
 
+Users can choose to generate age trend plots using the `ggplot` package or the `plotly` package (if `plotly` is installed).
+
 ```{r, eval=FALSE}
-ComBatFamQC::age_shiny(age_list, features, quantile_type)
+# plotly: interactive plot
+ComBatFamQC::age_shiny(age_list, features, quantile_type, use_plotly = TRUE)
+# ggplot: static plot
+ComBatFamQC::age_shiny(age_list, features, quantile_type, use_plotly = FALSE)
 ```
 
 ## Save Age Trend Table and GAMLSS Model

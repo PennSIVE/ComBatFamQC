@@ -28,18 +28,17 @@ interaction_gen(
 \value{
 \code{interaction_gen} returns a list containing the following components:
 \item{interaction}{A vector of interaction terms to be included}
-\item{covariates}{Modefied covariates after expressing interaction terms}
-\item{smooth}{Modefied smooth terms after expressing interaction terms}
+\item{covariates}{Modified covariates after expressing interaction terms}
+\item{smooth}{Modified smooth terms after expressing interaction terms}
 }
 \description{
 Generate appropriate interaction terms for regression models.
 }
 \examples{
-\dontrun{
 interaction_gen(type = "lm", covariates = c("AGE", "SEX", "DIAGNOSIS"),
 interaction = "AGE,DIAGNOSIS")
 
 interaction_gen(type = "gam", covariates = c("AGE", "SEX", "DIAGNOSIS"),
 smooth = "AGE", smooth_int_type = "linear", interaction = "AGE,DIAGNOSIS")
-}
+
 }
