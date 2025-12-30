@@ -1,37 +1,7 @@
 {
-  "count": 217,
-  "uniques": 125,
+  "count": 286,
+  "uniques": 132,
   "clones": [
-    {
-      "timestamp": "2025-12-09T00:00:00Z",
-      "count": 12,
-      "uniques": 9
-    },
-    {
-      "timestamp": "2025-12-10T00:00:00Z",
-      "count": 18,
-      "uniques": 11
-    },
-    {
-      "timestamp": "2025-12-11T00:00:00Z",
-      "count": 9,
-      "uniques": 9
-    },
-    {
-      "timestamp": "2025-12-12T00:00:00Z",
-      "count": 19,
-      "uniques": 8
-    },
-    {
-      "timestamp": "2025-12-13T00:00:00Z",
-      "count": 14,
-      "uniques": 9
-    },
-    {
-      "timestamp": "2025-12-14T00:00:00Z",
-      "count": 12,
-      "uniques": 9
-    },
     {
       "timestamp": "2025-12-15T00:00:00Z",
       "count": 15,
@@ -71,6 +41,36 @@
       "timestamp": "2025-12-22T00:00:00Z",
       "count": 13,
       "uniques": 8
+    },
+    {
+      "timestamp": "2025-12-23T00:00:00Z",
+      "count": 20,
+      "uniques": 12
+    },
+    {
+      "timestamp": "2025-12-24T00:00:00Z",
+      "count": 31,
+      "uniques": 10
+    },
+    {
+      "timestamp": "2025-12-25T00:00:00Z",
+      "count": 22,
+      "uniques": 9
+    },
+    {
+      "timestamp": "2025-12-26T00:00:00Z",
+      "count": 18,
+      "uniques": 9
+    },
+    {
+      "timestamp": "2025-12-27T00:00:00Z",
+      "count": 24,
+      "uniques": 9
+    },
+    {
+      "timestamp": "2025-12-28T00:00:00Z",
+      "count": 38,
+      "uniques": 13
     }
   ]
 }
