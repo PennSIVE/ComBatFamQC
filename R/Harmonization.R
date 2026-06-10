@@ -1,6 +1,6 @@
 #' ComBatFamily Harmonization
 #'
-#' Conduct harmonization using four types of methods: 1) Original ComBat, 2) Longitudinal ComBat, 3) ComBat-GAM, and 4) CovBat.
+#' Conduct harmonization using four types of methods: 1) Original ComBat, 2) Longitudinal ComBat, 3) ComBat-GAM, 4) CovBat, and 5) Nonlinear Longitudinal ComBat. 
 #'
 #' @param eb_check A boolean variable indicating whether the user wants to run the EB assumption test before harmonization.
 #' @param result A list derived from `visual_prep()` that contains dataset and batch effect diagnostic information for Shiny visualization. Can be skipped if `features`, `batch`, `covariates` and `df` are provided.
