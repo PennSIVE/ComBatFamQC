@@ -76,26 +76,28 @@ combat_harm <- function(eb_check = FALSE, result = NULL, features = NULL, batch 
         message("Starting first-time harmonization...")
         form <- form_gen(x = type, c = form_c, i = interaction, random = random, smooth = smooth)
         if(family == "comfam"){
-          if(quiet){
-            ComBat_run <- suppressMessages(suppressWarnings(comfam(data = df[features],
-                                 bat = df[[batch]],
-                                 covar = combat_c,
-                                 model = eval(parse(text = type)),
-                                 formula = as.formula(form),
-                                 ref.batch = ref.batch,
-                                 eb = eb,
-                                 ...)))
-
-          }else{
-            ComBat_run <- comfam(data = df[features],
-                                 bat = df[[batch]],
-                                 covar = combat_c,
-                                 model = eval(parse(text = type)),
-                                 formula = as.formula(form),
-                                 ref.batch = ref.batch,
-                                 eb = eb,
-                                 ...)
+          if(type == "gamm4"){
+            random_formula <- as.formula(paste0("~(1|", random, ")"))
+            run_fn <- function() comfam(data    = df[features],
+                                        bat     = df[[batch]],
+                                        covar   = combat_c,
+                                        model   = gamm4::gamm4,
+                                        formula = as.formula(form),
+                                        random  = random_formula,
+                                        ref.batch = ref.batch,
+                                        eb = eb,
+                                        ...)
+          } else {
+            run_fn <- function() comfam(data    = df[features],
+                                        bat     = df[[batch]],
+                                        covar   = combat_c,
+                                        model   = eval(parse(text = type)),
+                                        formula = as.formula(form),
+                                        ref.batch = ref.batch,
+                                        eb = eb,
+                                        ...)
           }
+          ComBat_run <- if(quiet) suppressMessages(suppressWarnings(run_fn())) else run_fn()
         }else{
           if(quiet){
             ComBat_run <- suppressMessages(suppressWarnings(covfam(data = df[features],
@@ -170,25 +172,28 @@ combat_harm <- function(eb_check = FALSE, result = NULL, features = NULL, batch 
       }
       form <- form_gen(x = type, c = form_c, i = interaction, random = random, smooth = smooth)
       if(family == "comfam"){
-        if(quiet){
-          ComBat_run <- suppressMessages(suppressWarnings(comfam(data = df_c[features],
-                               bat = df_c[[batch]],
-                               covar = combat_c,
-                               model = eval(parse(text = type)),
-                               formula = as.formula(form),
-                               ref.batch = "reference",
-                               eb = eb,
-                               ...)))
-        }else{
-          ComBat_run <- comfam(data = df_c[features],
-                               bat = df_c[[batch]],
-                               covar = combat_c,
-                               model = eval(parse(text = type)),
-                               formula = as.formula(form),
-                               ref.batch = "reference",
-                               eb = eb,
-                               ...)
+        if(type == "gamm4"){
+          random_formula <- as.formula(paste0("~(1|", random, ")"))
+          run_fn <- function() comfam(data    = df[features],
+                                      bat     = df[[batch]],
+                                      covar   = combat_c,
+                                      model   = gamm4::gamm4,
+                                      formula = as.formula(form),
+                                      random  = random_formula,
+                                      ref.batch = ref.batch,
+                                      eb = eb,
+                                      ...)
+        } else {
+          run_fn <- function() comfam(data    = df[features],
+                                      bat     = df[[batch]],
+                                      covar   = combat_c,
+                                      model   = eval(parse(text = type)),
+                                      formula = as.formula(form),
+                                      ref.batch = ref.batch,
+                                      eb = eb,
+                                      ...)
         }
+        ComBat_run <- if(quiet) suppressMessages(suppressWarnings(run_fn())) else run_fn()
       }else{
         if(quiet){
           ComBat_run <- suppressMessages(suppressWarnings(covfam(data = df_c[features],
@@ -385,7 +390,7 @@ comfam <- function(data, bat, covar = NULL, model = lm, formula = NULL,
 
       # include batch in formula to target pooled mean/variance
       bat_formula <- update(formula, ~ . + batch + -1)
-      do.call(model, list(formula = bat_formula, data = dat, ...))
+      do.call(model, list(formula = bat_formula, data = dat))
     })
   }
 
@@ -400,8 +405,13 @@ comfam <- function(data, bat, covar = NULL, model = lm, formula = NULL,
     pmod$batch[,which(levels(bat) == ref.batch)] <- 1
   }
 
-  stand_mean <- sapply(fits, predict, newdata = pmod, type = "response")
-  resid_mean <- sapply(fits, predict, newdata = mod, type = "response")
+  if (is.function(model) && identical(model, gamm4::gamm4)) {
+    stand_mean <- sapply(fits, predict_gamm4, newdata = pmod, type = "pmod")
+    resid_mean <- sapply(fits, predict_gamm4, newdata = mod,  type = "mod")
+  } else {
+    stand_mean <- sapply(fits, predict, newdata = pmod, type = "response")
+    resid_mean <- sapply(fits, predict, newdata = mod,  type = "response")
+  }
 
   if (!is.null(ref.batch)) {
     var_pooled <- apply((data - resid_mean)[ref, , drop = FALSE], 2, scl) *
@@ -965,4 +975,17 @@ predict.covfam <- function(object, newdata, newbat, newcovar = NULL,
   return(out)
 }
 
+predict_gamm4 <- function(model, newdata, type) {
+  X    <- lme4::getME(model$mer, "X")
+  if (type == "pmod") {
+    keep <- grepl("^Xbatch", colnames(X))
+    B    <- as.matrix(newdata$batch)
+    need <- sub("^Xbatch", "", colnames(X)[keep])
+    X[, keep] <- B[, need, drop = FALSE]
+  }
+  beta <- lme4::getME(model$mer, "beta")
+  Zt   <- lme4::getME(model$mer, "Zt")
+  b    <- lme4::getME(model$mer, "b")
+  as.vector(X %*% beta) + as.vector(Matrix::t(Zt) %*% b)
+}
 

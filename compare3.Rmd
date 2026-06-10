@@ -1,0 +1,166 @@
+---
+title: "nlc_comfam_comfamqc"
+author: "Wendy Wen"
+date: "2026-06-10"
+output: html_document
+---
+```{r}
+devtools::load_all()
+```
+```{r}
+library(readr)
+library(ggplot2)
+library(dplyr)
+library(purrr)
+library(gamm4)
+
+ADNIDataset <- read_csv("/Users/sw0214/Desktop/run_NLC/combatfam/ADNIDataset.csv")
+COMB <- ADNIDataset
+Feat <- c(18,19,26,27,30,31,39,40,51,52,62,63,66,67,116,117,132,133,148,149)
+COMB_USE <- COMB[,c(1:15,Feat)]
+d <- trimws(COMB_USE$Diagnosis_nearest_2.0)
+COMB <- COMB_USE[!is.na(d) & d != "", ]
+data_features <- COMB[, 16:35]
+bat <- as.factor(COMB$Study)
+subid <- as.factor(COMB$participant_id)
+covar <- COMB[c("Age", "DLICV_baseline", "Sex", "Diagnosis_nearest_2.0")]
+
+combat_result <- comfam(
+  data = data_features,
+  bat = bat,
+  covar = covar,
+  model = gamm4,
+  formula = y ~ s(Age, bs='cr', k=100) + DLICV_baseline + Sex + Diagnosis_nearest_2.0,
+  random = ~(1|subid),
+  eb = TRUE,
+  robust.LS = FALSE)
+```
+```{r}
+# Extract harmonized features
+harm_df <- as.data.frame(combat_result$dat.combat)
+colnames(harm_df) <- colnames(COMB)[16:35]
+
+# Combine metadata (cols 2:15, skipping row index col 1) + harmonized features
+COMB_harmonized <- cbind(COMB[, 2:15], harm_df)
+
+cat("Dimensions:", nrow(COMB_harmonized), "rows x", ncol(COMB_harmonized), "cols\n")
+
+readr::write_csv(COMB_harmonized, "/Users/sw0214/Desktop/run_NLC/harmonized_data/comfamqc_harmonized.csv")
+cat("Saved to harmonized_data/comfamqc_harmonized.csv\n")
+
+comfamqc_check <- readr::read_csv("/Users/sw0214/Desktop/run_NLC/harmonized_data/comfamqc_harmonized.csv")
+head(comfamqc_check)
+```
+```{r}
+library(tidyr)
+library(patchwork)
+
+# Load all three harmonized datasets
+comfamqc_harmonized <- readr::read_csv("/Users/sw0214/Desktop/run_NLC/harmonized_data/comfamqc_harmonized.csv")
+comfam_harmonized   <- readr::read_csv("/Users/sw0214/Desktop/run_NLC/harmonized_data/comfam_harmonized.csv")
+neuro_harmonized    <- readr::read_csv("/Users/sw0214/Desktop/run_NLC/harmonized_data/neurocombat_harmonized.csv")
+
+feat_cols <- colnames(COMB)[16:35]
+
+# Tag each dataset and combine
+df_all <- bind_rows(
+  comfamqc_harmonized %>% select(all_of(feat_cols)) %>% mutate(Source = "ComFamQC"),
+  comfam_harmonized   %>% select(all_of(feat_cols)) %>% mutate(Source = "ComFam"),
+  neuro_harmonized    %>% select(all_of(feat_cols)) %>% mutate(Source = "NeuroCombat")
+) %>%
+  pivot_longer(cols = all_of(feat_cols), names_to = "Feature", values_to = "Value")
+
+# Helper: density plot for a subset of sources
+# Factor order controls draw order — last level is drawn on top
+plot_density <- function(data, sources, title) {
+  # Draw order: NeuroCombat (bottom) → ComFamQC → ComFam (top)
+  draw_order <- c("NeuroCombat", "ComFamQC", "ComFam")
+  ordered_sources <- draw_order[draw_order %in% sources]
+
+  data %>%
+    filter(Source %in% sources) %>%
+    mutate(Source = factor(Source, levels = ordered_sources)) %>%
+    ggplot(aes(x = Value, color = Source, linetype = Source, linewidth = Source)) +
+    geom_density(fill = NA) +
+    facet_wrap(~ Feature, scales = "free", ncol = 4) +
+    scale_color_manual(values = c(
+      "ComFamQC"    = "#E64B35",
+      "ComFam"      = "#4DBBD5",
+      "NeuroCombat" = "#999999"
+    )) +
+    scale_linetype_manual(values = c(
+      "ComFamQC"    = "solid",
+      "ComFam"      = "dotted",
+      "NeuroCombat" = "solid"
+    )) +
+    scale_linewidth_manual(values = c(
+      "ComFamQC"    = 0.8,
+      "ComFam"      = 0.8,
+      "NeuroCombat" = 0.5
+    )) +
+    labs(
+      title     = title,
+      x         = "Value",
+      y         = "Density",
+      color     = "Method",
+      linetype  = "Method",
+      linewidth = "Method"
+    ) +
+    theme_bw(base_size = 11) +
+    theme(
+      strip.background = element_rect(fill = "grey92"),
+      strip.text       = element_text(size = 8),
+      legend.position  = "bottom"
+    )
+}
+
+# Pairwise comparisons
+p1 <- plot_density(df_all, c("ComFamQC", "ComFam"),      "ComFamQC vs ComFam")
+p2 <- plot_density(df_all, c("ComFamQC", "NeuroCombat"), "ComFamQC vs NeuroCombat")
+p3 <- plot_density(df_all, c("ComFam",   "NeuroCombat"), "ComFam vs NeuroCombat")
+
+# All three together
+p4 <- plot_density(df_all, c("ComFamQC", "ComFam", "NeuroCombat"), "All Three Methods")
+
+print(p1)
+print(p2)
+print(p3)
+print(p4)
+```
+
+```{r}
+# Boxplots per feature, methods side by side
+df_all %>%
+  mutate(Source = factor(Source, levels = c("ComFamQC", "ComFam", "NeuroCombat"))) %>%
+  ggplot(aes(x = Source, y = Value, fill = Source, color = Source)) +
+  geom_violin(alpha = 0.3, linewidth = 0.5) +
+  geom_boxplot(width = 0.15, alpha = 0.8, outlier.size = 0.5, outlier.alpha = 0.4,
+               linewidth = 0.4, color = "grey30") +
+  facet_wrap(~ Feature, scales = "free_y", ncol = 4) +
+  scale_fill_manual(values = c(
+    "ComFamQC"    = "#E64B35",
+    "ComFam"      = "#4DBBD5",
+    "NeuroCombat" = "#999999"
+  )) +
+  scale_color_manual(values = c(
+    "ComFamQC"    = "#E64B35",
+    "ComFam"      = "#4DBBD5",
+    "NeuroCombat" = "#999999"
+  )) +
+  labs(
+    title = "Feature Distributions by Harmonization Method",
+    x     = NULL,
+    y     = "Value",
+    fill  = "Method",
+    color = "Method"
+  ) +
+  theme_bw(base_size = 11) +
+  theme(
+    strip.background  = element_rect(fill = "grey92"),
+    strip.text        = element_text(size = 8),
+    axis.text.x       = element_blank(),
+    axis.ticks.x      = element_blank(),
+    legend.position   = "bottom"
+  )
+```
+

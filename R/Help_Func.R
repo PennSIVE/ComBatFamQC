@@ -535,6 +535,15 @@ form_gen <- function(x, c = NULL, i = NULL, random = NULL, smooth = NULL){
         form <- paste0("y ~ ", paste(colnames(c), collapse = " + "), " + ", paste(i, collapse = " + "))
       }
     }
+  }else if(x == "gamm4"){
+    if (is.null(i)){
+      form <- paste0("y ~ ", paste(colnames(c), collapse = " + "),
+                     " + ", paste("s(", smooth, ")", collapse = " + "))
+    }else{
+      form <- paste0("y ~ ", paste(colnames(c), collapse = " + "),
+                     " + ", paste("s(", smooth, ")", collapse = " + "),
+                     " + ", paste(i, collapse = " + "))
+    }
   }
   return(form)
 }
