@@ -49,9 +49,9 @@ data_prep <- function(stage = "harmonization", result = NULL, features = NULL, b
       df <- df[complete.cases(df[c(features, batch, cov_shiny, random)]),]
       obs_new <- nrow(df)
       if((obs_n - obs_new) != 0){
-        print(paste0(obs_n - obs_new, " observation(s) are dropped due to missing values."))
+        message(paste0(obs_n - obs_new, " observation(s) are dropped due to missing values."))
       }else{
-        print("No observation is dropped due to missing values.")
+        message("No observation is dropped due to missing values.")
       }
       df[[batch]] <- as.factor(df[[batch]])
       df[char_var] <- lapply(df[char_var], as.factor)
@@ -96,9 +96,9 @@ data_prep <- function(stage = "harmonization", result = NULL, features = NULL, b
       df <- df[complete.cases(df[c(features, batch, covariates, random)]),]
       obs_new <- nrow(df)
       if((obs_n - obs_new) != 0){
-        print(paste0(obs_n - obs_new, " observation(s) are dropped due to missing values."))
+        message(paste0(obs_n - obs_new, " observation(s) are dropped due to missing values."))
       }else{
-        print("No observation is dropped due to missing values.")
+        message("No observation is dropped due to missing values.")
       }
       df[[batch]] <- as.factor(df[[batch]])
       char_var <- covariates[sapply(df[covariates], function(col) is.character(col) || is.factor(col))]
@@ -112,11 +112,11 @@ data_prep <- function(stage = "harmonization", result = NULL, features = NULL, b
       summary_df <- df %>% group_by(.data[[batch]]) %>% summarize(count = n(), percentage = 100 * n() / nrow(df))
       colnames(summary_df) <- c(batch, "count", "percentage (%)")
       summary_df <- summary_df %>% mutate(remove = case_when(.data[["count"]] < 3 ~ "removed",
-                                                            .default = "keeped"))
+                                                            .default = "kept"))
       batch_rm <- summary_df %>% filter(.data[["remove"]] == "removed") %>% pull(.data[[batch]]) %>% droplevels()
       if(length(batch_rm) > 0){
-        print(paste0("Batch levels that contain less than 3 observations are dropped: ", length(batch_rm), " level(s) are dropped, corresponding to ", df %>% filter(.data[[batch]] %in% batch_rm) %>% nrow(), " observations."))
-      }else{print("Batch levels that contain less than 3 observations are dropped: no batch level is dropped.")}
+        message(paste0("Batch levels that contain less than 3 observations are dropped: ", length(batch_rm), " level(s) are dropped, corresponding to ", df %>% filter(.data[[batch]] %in% batch_rm) %>% nrow(), " observations."))
+      }else{message("Batch levels that contain less than 3 observations are dropped: no batch level is dropped.")}
       df <- df %>% filter(!.data[[batch]] %in% batch_rm)
       df[[batch]] <- df[[batch]] %>% droplevels()
     }
@@ -135,7 +135,7 @@ data_prep <- function(stage = "harmonization", result = NULL, features = NULL, b
     dropped_col <- NULL
     if (n_orig > n_new){
       dropped_col <- setdiff(colnames(features_orig), colnames(features_new))
-      print(paste0(n_orig - n_new, " univariate feature column(s) are dropped: ", dropped_col))
+      message(paste0(n_orig - n_new, " univariate feature column(s) are dropped: ", dropped_col))
     }
     features <- colnames(features_new)
 
@@ -184,9 +184,9 @@ data_prep <- function(stage = "harmonization", result = NULL, features = NULL, b
     df <- df[complete.cases(df[c(features, covariates, random)]),]
     obs_new <- nrow(df)
     if((obs_n - obs_new) != 0){
-      print(paste0(obs_n - obs_new, " observation(s) are dropped due to missing values."))
+      message(paste0(obs_n - obs_new, " observation(s) are dropped due to missing values."))
     }else{
-      print("No observation is dropped due to missing values.")
+      message("No observation is dropped due to missing values.")
     }
     char_var <- covariates[sapply(df[covariates], function(col) is.character(col) || is.factor(col))]
     enco_var <- covariates[sapply(df[covariates], function(col) length(unique(col)) == 2 && all(unique(col) %in% c(0,1)))]
@@ -209,7 +209,7 @@ data_prep <- function(stage = "harmonization", result = NULL, features = NULL, b
     dropped_col <- NULL
     if (n_orig > n_new){
       dropped_col <- setdiff(colnames(features_orig), colnames(features_new))
-      print(paste0(n_orig - n_new, " univariate feature column(s) are dropped: ", dropped_col))
+      message(paste0(n_orig - n_new, " univariate feature column(s) are dropped: ", dropped_col))
     }
 
     features <- colnames(features_new)
@@ -644,26 +644,24 @@ interaction_gen <- function(type = "lm", covariates = NULL, smooth = NULL, inter
 #'
 #'
 #' @examples
-#' # Initialize result to NULL for safety
-#' result <- NULL
-#'
-#' # Check if the previous results file exists and load it, or run `visual_prep`
-#' if (file.exists("./tests/testthat/previous-results/lm_result.rds")) {
-#'   result <- readRDS("./tests/testthat/previous-results/lm_result.rds")
-#' }
-#'
-#' # Use the result if it is available
-#' if (!is.null(result)) {
-#'   temp_dir <- tempdir()
-#'   diag_save(temp_dir, result)
+#' if(interactive()){
+#'   result <- visual_prep(type = "lm", features = "thickness.left.cuneus",
+#'   batch = "manufac", covariates = "AGE", df = adni[1:100, ], mdmr = FALSE, cores = 1)
+#'   temp_dir <- tempfile()
+#'   dir.create(temp_dir)
+#'   diag_save(temp_dir, result, quarto = FALSE)
 #'   message("Diagnostics saved to: ", temp_dir)
-#' } else {
-#'   message("Result is NULL. Please ensure the file exists and is accessible.")
+#'   unlink(temp_dir, recursive = TRUE)  # Clean up the temporary directory
+#' }
+#' \dontshow{
+#' # Ensure temp_dir exists before attempting cleanup
+#' if (exists("temp_dir")) unlink(temp_dir, recursive = TRUE)
 #' }
 
 diag_save <- function(path, result, use_quarto = TRUE){
   quarto_package <- requireNamespace("quarto", quietly = TRUE)
-  if (use_quarto && !is.null(Sys.which("quarto")[[1]]) && quarto_package) {
+  if(quarto_package){quarto_path <- quarto::quarto_path()}else{quarto_path <- NULL}
+  if (use_quarto && !is.null(quarto_path) && quarto_package) {
     original_dir <- getwd()
     template_path <- system.file("quarto_templates/diagnosis_report.qmd", package = "ComBatFamQC")
     new_template_path <- file.path(path, basename(template_path))
@@ -675,12 +673,37 @@ diag_save <- function(path, result, use_quarto = TRUE){
     setwd(path)
     on.exit(setwd(original_dir), add = TRUE)
 
+    result_names <- names(result)
+    table_names <- result_names[grepl("residual_|pca|tsne", result_names)]
+    test_names <- result_names[grepl("_test_|mdmr", result_names)]
+
+    result <- lapply(result_names, function(name){
+      if(name %in% test_names){
+        n <- nrow(result[[name]])
+        if(n != 0){
+          test_table <- result[[name]] %>% mutate(sig = ifelse(is.na(.data[["sig"]]), "", .data[["sig"]]))
+        }else{test_table <- result[[name]]}
+        return(test_table)
+      }else if(name %in% table_names){
+        table <- result[[name]][, colSums(is.na(result[[name]])) == 0]
+        return(table)
+      }else{
+        return(result[[name]])
+      }
+    })
+    names(result) <- result_names
+
+    result$info$df <- result$info$df[, colSums(is.na(result$info$df)) == 0]
+
     quarto::quarto_render(
       input = "diagnosis_report.qmd",
       output_file = "diagnosis_report.html",
       execute_params = list(data = result)
     )
   }else{
+    if (use_quarto && (!quarto_package || is.null(Sys.which("quarto")[[1]]))) {
+      warning("Quarto CLI or the `quarto` package is not available. Falling back to Excel output.")
+    }
     wb <- createWorkbook()
     header_style <- createStyle(textDecoration = "bold", fgFill = "#D3D3D3", halign = "center")
     addWorksheet(wb, "Batch Summary")
@@ -691,7 +714,9 @@ diag_save <- function(path, result, use_quarto = TRUE){
     addStyle(wb, sheet = "PCA Summary", style = header_style, rows = 1, cols = seq_len(ncol(result$pca_summary)), gridExpand = TRUE)
     addWorksheet(wb, "MDMR")
     writeData(wb, "MDMR", result$mdmr.summary)
-    addStyle(wb, sheet = "MDMR", style = header_style, rows = 1, cols = seq_len(ncol(result$mdmr.summary)), gridExpand = TRUE)
+    if(!is.null(result$mdmr.summary)){
+      addStyle(wb, sheet = "MDMR", style = header_style, rows = 1, cols = seq_len(ncol(result$mdmr.summary)), gridExpand = TRUE)
+    }
     addWorksheet(wb, "ANOVA")
     writeData(wb, "ANOVA", result$anova_test_df)
     addStyle(wb, sheet = "ANOVA", style = header_style, rows = 1, cols = seq_len(ncol(result$anova_test_df)), gridExpand = TRUE)
@@ -729,23 +754,21 @@ diag_save <- function(path, result, use_quarto = TRUE){
 #'
 #'
 #' @examples
-#' # Initialize result to NULL for safety
-#' age_list <- NULL
+#' if(interactive()){
+#' sub_df <- age_df[,c("Volume_1", "age", "sex", "ICV_baseline")] |> na.omit()
+#' colnames(sub_df) <- c("Volume_1", "age", "sex", "icv")
+#' age_list <- list("Volume_1" = age_list_gen(sub_df = sub_df))
 #'
-#' # Check if the previous results file exists and load it
-#' if (file.exists("./tests/testthat/previous-results/age_list.rds")) {
-#'   age_list <- readRDS("./tests/testthat/previous-results/age_list.rds")
+#' temp_dir <- tempfile()
+#' dir.create(temp_dir)
+#' age_save(temp_dir, age_list)
+#' message("Age trend table saved to: ", temp_dir)
+#' unlink(temp_dir, recursive = TRUE)
 #' }
-#'
-#' # Use the result if it is available
-#' if (!is.null(age_list)) {
-#'   temp_dir <- tempdir()
-#'   age_save(temp_dir, age_list)
-#'   message("Age trend table saved to: ", temp_dir)
-#' } else {
-#'   message("Age list is NULL. Please ensure the file exists and is accessible.")
+#' \dontshow{
+#' if (exists("temp_dir")) unlink(temp_dir, recursive = TRUE)
 #' }
-#'
+
 
 
 
@@ -808,7 +831,6 @@ age_save <- function(path, age_list){
 #' @examples
 #' if (requireNamespace("gamlss", quietly = TRUE)) {
 #'   library(gamlss)
-#'   set.seed(123)
 #'   sub_df <- data.frame(
 #'     age = seq(1, 20, length.out = 100),
 #'     height = 50 + 2.5 * seq(1, 20, length.out = 100) + rnorm(100, 0, 5)

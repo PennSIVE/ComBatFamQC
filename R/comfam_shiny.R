@@ -212,7 +212,7 @@ comfam_shiny = function(result, after = FALSE, ...){
                          width = 12,
                          title = "T-SNE",
                          shiny::plotOutput("tsne")))),
-            tabPanel("Diagnosis of Individual Batch Effect", value = 5,
+            tabPanel("Diagnosis of Feature-level Batch Effect", value = 5,
                      fluidRow(
                        shinydashboard::box(
                          width = 12,
@@ -408,7 +408,7 @@ comfam_shiny = function(result, after = FALSE, ...){
     })
 
     output$cov_text <- shiny::renderText({
-      print("No covariate is preserved")
+      "No covariate is preserved"
     })
 
     output$cov_plot <- shiny::renderPlot({
@@ -696,7 +696,7 @@ comfam_shiny = function(result, after = FALSE, ...){
       }else if(length(result$info$features) == 1){
         HTML(paste0("<strong>Note:</strong> The EB method is skipped for one feature dataset! Only the empirical distribution of the location and scale parameters will be displayed. <br>", "<br>"))
       }else{
-        HTML(paste0("<strong>Note:</strong> When the number of features is small, the empirical and prior distributions can look weird. <br>", "<br>"))
+        HTML(paste0("<strong>Note:</strong> When the number of features is small, the empirical and prior distributions may not visually align. <br>", "<br>"))
       }
     })
 
@@ -949,20 +949,11 @@ comfam_shiny = function(result, after = FALSE, ...){
 #' - `"eb_scale"`: Empirical Bayes scale parameter density plots.
 #'
 #' @examples
-#' # Initialize result to NULL for safety
-#' result <- NULL
-#'
-#' # Check if the previous results file exists and load it, or run `visual_prep`
-#' if (file.exists("./tests/testthat/previous-results/lm_result.rds")) {
-#'   result <- readRDS("./tests/testthat/previous-results/lm_result.rds")
-#' }
-#'
-#' # Use the result if it is available
-#' if (!is.null(result)) {
-#'   combat_plot_gen(result, f = "Feature1", plot_name = "batch_density")
-#'   combat_plot_gen(result, f = "Feature1", c = "Age", plot_name = "cov_feature")
-#' } else {
-#'   message("Result is NULL. Please ensure the file exists and is accessible.")
+#' if(interactive()){
+#'  result <- visual_prep(type = "lm", features = "thickness.left.cuneus",
+#'  batch = "manufac", covariates = "AGE", df = adni[1:100, ], mdmr = FALSE, cores = 1)
+#'  combat_plot_gen(result, f = "thickness.left.cuneus", plot_name = "batch_density")
+#'  combat_plot_gen(result, f = "thickness.left.cuneus", c = "AGE", plot_name = "cov_feature")
 #' }
 #'
 #' @export
@@ -1099,7 +1090,7 @@ combat_plot_gen <- function(result, f = NULL, batch_control = "No", batch_level 
 
   }else if(plot_name == "batch_summary"){
     ## batch level distribution plot
-    add_plot <- ggplot(info$summary_df %>% filter(remove == "keeped"), aes(x = .data[["count"]], y = .data[[batch]])) +
+    add_plot <- ggplot(info$summary_df %>% filter(remove == "kept"), aes(x = .data[["count"]], y = .data[[batch]])) +
       geom_bar(stat = "identity", fill = "aquamarine") +
       labs(x = "Count", y = "Batch") +
       theme(
@@ -1141,7 +1132,7 @@ combat_plot_gen <- function(result, f = NULL, batch_control = "No", batch_level 
     }
   }else if(plot_name == "resid_add"){
     ## additive residual plot
-    add_mean <- result$residual_add_df %>% group_by(result$residual_add_df[[batch]]) %>% summarize(across(features, median, .names = "mean_{.col}")) %>% ungroup()
+    add_mean <- result$residual_add_df %>% group_by(.data[[batch]]) %>% summarize(across(features, median, .names = "mean_{.col}")) %>% ungroup()
     colnames(add_mean) <- c(batch, colnames(add_mean)[-1])
     result$residual_add_df <- result$residual_add_df %>% left_join(add_mean, by = c(batch))
     if(color == "No"){
@@ -1222,7 +1213,7 @@ combat_plot_gen <- function(result, f = NULL, batch_control = "No", batch_level 
     }
   }else if(plot_name == "resid_mul"){
     ## multiplicative residual plot
-    add_mean <- result$residual_add_df %>% group_by(result$residual_add_df[[batch]]) %>% summarize(across(features, median, .names = "mean_{.col}")) %>% ungroup()
+    add_mean <- result$residual_add_df %>% group_by(.data[[batch]]) %>% summarize(across(features, median, .names = "mean_{.col}")) %>% ungroup()
     colnames(add_mean) <- c(batch, colnames(add_mean)[-1])
     result$residual_ml_df <- result$residual_ml_df %>% left_join(add_mean, by = c(batch))
     if(color == "No"){
@@ -1517,22 +1508,12 @@ combat_plot_gen <- function(result, f = NULL, batch_control = "No", batch_level 
 #' The function dynamically generates tables based on the `table_name` parameter.
 #'
 #' @examples
-#' # Initialize result to NULL for safety
-#' result <- NULL
-#'
-#' # Check if the previous results file exists and load it, or run `visual_prep`
-#' if (file.exists("./tests/testthat/previous-results/lm_result.rds")) {
-#'   result <- readRDS("./tests/testthat/previous-results/lm_result.rds")
-#' }
-#'
-#' # Use the result if it is available
-#' if (!is.null(result)) {
-#'   combat_table_gen(result, table_name = "data_overview")
-#'   combat_table_gen(result, table_name = "cov_table", c = "Age")
-#'   combat_table_gen(result, table_name = "pc_variance", PC1 = "PC1", PC2 = "PC2")
-#' } else {
-#'   message("Result is NULL. Please ensure the file exists and is accessible.")
-#' }
+#' if(interactive()){
+#'  result <- visual_prep(type = "lm", features = "thickness.left.cuneus",
+#'  batch = "manufac", covariates = "AGE", df = adni[1:100, ], mdmr = FALSE, cores = 1)
+#'  combat_table_gen(result, table_name = "cov_table", c = "AGE")
+#'  combat_table_gen(result, table_name = "pc_variance", PC1 = "PC1", PC2 = "PC2")
+#'  }
 #'
 #' @export
 

@@ -82,20 +82,11 @@ The function dynamically generates plots based on the \code{plot_name} parameter
 }
 }
 \examples{
-# Initialize result to NULL for safety
-result <- NULL
-
-# Check if the previous results file exists and load it, or run `visual_prep`
-if (file.exists("./tests/testthat/previous-results/lm_result.rds")) {
-  result <- readRDS("./tests/testthat/previous-results/lm_result.rds")
-}
-
-# Use the result if it is available
-if (!is.null(result)) {
-  combat_plot_gen(result, f = "Feature1", plot_name = "batch_density")
-  combat_plot_gen(result, f = "Feature1", c = "Age", plot_name = "cov_feature")
-} else {
-  message("Result is NULL. Please ensure the file exists and is accessible.")
+if(interactive()){
+ result <- visual_prep(type = "lm", features = "thickness.left.cuneus",
+ batch = "manufac", covariates = "AGE", df = adni[1:100, ], mdmr = FALSE, cores = 1)
+ combat_plot_gen(result, f = "thickness.left.cuneus", plot_name = "batch_density")
+ combat_plot_gen(result, f = "thickness.left.cuneus", c = "AGE", plot_name = "cov_feature")
 }
 
 }
