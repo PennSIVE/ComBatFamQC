@@ -35,6 +35,7 @@ combat_result <- comfam(
   eb = TRUE,
   robust.LS = FALSE)
 ```
+
 ```{r}
 # Extract harmonized features
 harm_df <- as.data.frame(combat_result$dat.combat)
@@ -148,7 +149,7 @@ df_all %>%
     "NeuroCombat" = "#999999"
   )) +
   labs(
-    title = "Feature Distributions by Harmonization Method",
+    title = "Feature Distributions by Different Package",
     x     = NULL,
     y     = "Value",
     fill  = "Method",

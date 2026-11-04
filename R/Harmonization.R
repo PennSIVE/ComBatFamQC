@@ -54,7 +54,7 @@ combat_harm <- function(eb_check = FALSE, result = NULL, features = NULL, batch 
 
   # Empirical Estimates
   if (is.null(covariates)){
-    if(type == "lmer"){
+    if(type %in% c("lmer", "gamm4")){
       form_c <- NULL
       combat_c <- df[random]
     }else{
@@ -62,7 +62,7 @@ combat_harm <- function(eb_check = FALSE, result = NULL, features = NULL, batch 
       combat_c <- NULL
     }
   }else{
-    if(type == "lmer"){
+    if(type %in% c("lmer", "gamm4")){
       form_c <- df[covariates]
       combat_c <- cbind(df[cov_shiny], df[random])
     }else{
@@ -160,9 +160,9 @@ combat_harm <- function(eb_check = FALSE, result = NULL, features = NULL, batch 
       df_c[[batch]] <- as.factor(df_c[[batch]])
       if (is.null(covariates)){
         form_c <- NULL
-        combat_c <- NULL
+        combat_c <- if (type %in% c("lmer", "gamm4")) df_c[random] else NULL
       }else{
-        if(type == "lmer"){
+        if(type %in% c("lmer", "gamm4")){
           form_c <- df_c[covariates]
           combat_c <- cbind(df_c[cov_shiny], df_c[random])
         }else{
@@ -174,22 +174,22 @@ combat_harm <- function(eb_check = FALSE, result = NULL, features = NULL, batch 
       if(family == "comfam"){
         if(type == "gamm4"){
           random_formula <- as.formula(paste0("~(1|", random, ")"))
-          run_fn <- function() comfam(data    = df[features],
-                                      bat     = df[[batch]],
+          run_fn <- function() comfam(data    = df_c[features],
+                                      bat     = df_c[[batch]],
                                       covar   = combat_c,
                                       model   = gamm4::gamm4,
                                       formula = as.formula(form),
                                       random  = random_formula,
-                                      ref.batch = ref.batch,
+                                      ref.batch = "reference",
                                       eb = eb,
                                       ...)
         } else {
-          run_fn <- function() comfam(data    = df[features],
-                                      bat     = df[[batch]],
+          run_fn <- function() comfam(data    = df_c[features],
+                                      bat     = df_c[[batch]],
                                       covar   = combat_c,
                                       model   = eval(parse(text = type)),
                                       formula = as.formula(form),
-                                      ref.batch = ref.batch,
+                                      ref.batch = "reference",
                                       eb = eb,
                                       ...)
         }
@@ -390,7 +390,7 @@ comfam <- function(data, bat, covar = NULL, model = lm, formula = NULL,
 
       # include batch in formula to target pooled mean/variance
       bat_formula <- update(formula, ~ . + batch + -1)
-      do.call(model, list(formula = bat_formula, data = dat))
+      do.call(model, c(list(formula = bat_formula, data = dat), list(...)))
     })
   }
 
