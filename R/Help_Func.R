@@ -535,16 +535,15 @@ form_gen <- function(x, c = NULL, i = NULL, random = NULL, smooth = NULL){
         form <- paste0("y ~ ", paste(colnames(c), collapse = " + "), " + ", paste(i, collapse = " + "))
       }
     }
-  }else if(x == "gamm4"){
-    if (is.null(i)){
-      form <- paste0("y ~ ", paste(colnames(c), collapse = " + "),
-                     " + ", paste("s(", smooth, ")", collapse = " + "))
-    }else{
-      form <- paste0("y ~ ", paste(colnames(c), collapse = " + "),
-                     " + ", paste("s(", smooth, ")", collapse = " + "),
-                     " + ", paste(i, collapse = " + "))
+  } else if (x == "gamm4") {
+    smooth_terms <- if (length(smooth) > 0L) paste0("s(", smooth, ")")
+    rhs <- c(colnames(c), smooth_terms, i)
+    form <- if (length(rhs) > 0L) {
+      paste("y ~", paste(rhs, collapse = " + "))
+    } else {
+      "y ~ 1"
     }
-  }
+}
   return(form)
 }
 
@@ -580,7 +579,17 @@ form_gen <- function(x, c = NULL, i = NULL, random = NULL, smooth = NULL){
 
 interaction_gen <- function(type = "lm", covariates = NULL, smooth = NULL, interaction = NULL, smooth_int_type = NULL){
   if(!is.null(interaction)){
-    if(type == "gam"){
+    if (type %in% c("gam", "gamm4")) {
+      if (type == "gamm4") {
+        if (is.null(smooth_int_type)) {smooth_int_type <- rep("linear", length(interaction))}
+        supported <- c("linear", "categorical-continuous", "factor-smooth", "smooth-smooth")
+        if (any(!smooth_int_type %in% supported)) {
+          stop("For gamm4, use linear, categorical-continuous, factor-smooth, ",
+          "or smooth-smooth interactions. The tensor option generates ti(), ",
+          "which gamm4 does not support.", call. = FALSE
+        )}
+      }
+
       if (length(interaction) != length(smooth_int_type)) {
         stop("The lengths of 'interaction' and 'smooth_int_type' must match.")
       }

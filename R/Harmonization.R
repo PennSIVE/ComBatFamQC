@@ -1,6 +1,6 @@
 #' ComBatFamily Harmonization
 #'
-#' Conduct harmonization using four types of methods: 1) Original ComBat, 2) Longitudinal ComBat, 3) ComBat-GAM, 4) CovBat, and 5) Nonlinear Longitudinal ComBat. 
+#' Conduct harmonization using four types of methods: 1) Original ComBat, 2) Longitudinal ComBat, 3) ComBat-GAM, 4) CovBat, and 5) Nonlinear Longitudinal ComBat.
 #'
 #' @param eb_check A boolean variable indicating whether the user wants to run the EB assumption test before harmonization.
 #' @param result A list derived from `visual_prep()` that contains dataset and batch effect diagnostic information for Shiny visualization. Can be skipped if `features`, `batch`, `covariates` and `df` are provided.
@@ -53,23 +53,21 @@ combat_harm <- function(eb_check = FALSE, result = NULL, features = NULL, batch 
   type <- info$type
 
   # Empirical Estimates
-  if (is.null(covariates)){
-    if(type %in% c("lmer", "gamm4")){
-      form_c <- NULL
-      combat_c <- df[random]
-    }else{
-      form_c <- NULL
-      combat_c <- NULL
-    }
-  }else{
-    if(type %in% c("lmer", "gamm4")){
-      form_c <- df[covariates]
-      combat_c <- cbind(df[cov_shiny], df[random])
-    }else{
-      form_c <- df[covariates]
-      combat_c <- df[cov_shiny]
+  if (type == "gamm4") {
+    form_c <- if (length(covariates) > 0L) df[covariates] else NULL
+    combat_c <- df[unique(c(cov_shiny, random))]
+  } else if (is.null(covariates)) {
+    form_c <- NULL
+    combat_c <- if (type == "lmer") df[random] else NULL
+  } else {
+    form_c <- df[covariates]
+    combat_c <- if (type == "lmer") {
+      cbind(df[cov_shiny], df[random])
+    } else {
+      df[cov_shiny]
     }
   }
+
   if(!eb_check){
     if (is.null(reference)){
       if (!predict){
@@ -975,17 +973,46 @@ predict.covfam <- function(object, newdata, newbat, newcovar = NULL,
   return(out)
 }
 
+
 predict_gamm4 <- function(model, newdata, type) {
-  X    <- lme4::getME(model$mer, "X")
-  if (type == "pmod") {
-    keep <- grepl("^Xbatch", colnames(X))
-    B    <- as.matrix(newdata$batch)
-    need <- sub("^Xbatch", "", colnames(X)[keep])
-    X[, keep] <- B[, need, drop = FALSE]
+  type <- match.arg(type, c("mod", "pmod"))
+  mer <- model$mer
+
+  fam <- stats::family(mer)
+  if (fam$family != "gaussian" || fam$link != "identity") {
+    stop("gamm4 harmonization requires a Gaussian identity-link model.", call. = FALSE)
   }
-  beta <- lme4::getME(model$mer, "beta")
-  Zt   <- lme4::getME(model$mer, "Zt")
-  b    <- lme4::getME(model$mer, "b")
-  as.vector(X %*% beta) + as.vector(Matrix::t(Zt) %*% b)
+
+  fitted_mean <- as.numeric(stats::fitted(mer))
+  if (type == "mod") {return(fitted_mean)}
+
+  X <- lme4::getME(mer, "X")
+  B <- as.matrix(newdata$batch)
+
+  if (is.null(colnames(B)) || nrow(B) != nrow(X) ||
+      length(fitted_mean) != nrow(X)) {
+    stop("The target batch matrix must align with the fitted rows.", call. = FALSE)
+  }
+
+  fixed_formula <- lme4::nobars(stats::formula(mer))
+  matrix_term <- attr(stats::terms(fixed_formula), "term.labels")
+  if (length(matrix_term) != 1L) {
+    stop("Could not identify the internal gamm4 design matrix.", call. = FALSE)
+  }
+
+  batch_names <- paste0(matrix_term, "batch", colnames(B))
+  positions <- match(batch_names, colnames(X))
+  retained <- !is.na(positions)
+  dropped <- names(attr(X, "col.dropped"))
+
+  if (anyDuplicated(colnames(X)) || !any(retained) ||
+      any(!batch_names[!retained] %in% dropped)) {
+    stop("Could not map the batch indicators to the fitted gamm4 design.", call. = FALSE)
+  }
+
+  x_cols <- positions[retained]
+  batch_change <- B[, retained, drop = FALSE] - X[, x_cols, drop = FALSE]
+  batch_coef <- lme4::fixef(mer)[x_cols]
+  fitted_mean + drop(batch_change %*% batch_coef)
 }
 
