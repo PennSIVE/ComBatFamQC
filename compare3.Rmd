@@ -22,8 +22,8 @@ d <- trimws(COMB_USE$Diagnosis_nearest_2.0)
 COMB <- COMB_USE[!is.na(d) & d != "", ]
 data_features <- COMB[, 16:35]
 bat <- as.factor(COMB$Study)
-subid <- as.factor(COMB$participant_id)
 covar <- COMB[c("Age", "DLICV_baseline", "Sex", "Diagnosis_nearest_2.0")]
+covar$subid <- factor(COMB$participant_id)
 
 combat_result <- comfam(
   data = data_features,
