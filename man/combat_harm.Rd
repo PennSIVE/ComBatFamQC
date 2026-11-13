@@ -78,7 +78,7 @@ If the \code{eb_check} is set to be FALSE, then \code{combat_harm} returns a lis
 If \code{eb_check}  is set to be TRUE, then \code{combat_harm} will return a dataframe with the EB assumption test result.
 }
 \description{
-Conduct harmonization using four types of methods: 1) Original ComBat, 2) Longitudinal ComBat, 3) ComBat-GAM, and 4) CovBat.
+Conduct harmonization using four types of methods: 1) Original ComBat, 2) Longitudinal ComBat, 3) ComBat-GAM, 4) CovBat, and 5) Nonlinear Longitudinal ComBat.
 }
 \examples{
 combat_harm(features = colnames(adni)[43:53], batch = "manufac",

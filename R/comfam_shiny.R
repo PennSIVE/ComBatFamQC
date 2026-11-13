@@ -29,7 +29,7 @@
 #'   comfam_shiny(result = result_lm)
 #' }
 
-comfam_shiny = function(result, after = FALSE, ...){
+comfam_shiny = function(result, after = FALSE){
   info = result$info
   type = info$type
   df = info$df
