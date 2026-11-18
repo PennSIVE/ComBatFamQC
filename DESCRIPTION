@@ -25,6 +25,7 @@ Imports:
     pbkrtest,
     parallel,
     Rtsne,
+    gamm4,
     MDMR,
     gamlss,
     lme4,
